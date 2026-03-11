@@ -26,6 +26,11 @@
 ```bash
 python3 framediff.py compare --framework fedramp --old test_old.md --new test_new.md
 ```
+```bash
+# Quick-Scan
+python3 framediff.py compare --framework fedramp --old old.md --new new.md --quick-scan
+
+```
 
 **Dependencies:**
 - Python 3.11+
@@ -35,24 +40,17 @@ python3 framediff.py compare --framework fedramp --old test_old.md --new test_ne
 
 ---
 
-### Save as JSON
+### Save as JSON for FULL report
 
 ```bash
 python3 framediff.py compare --framework nist80053 --old policy_v1.md --new policy_v2.md --output json --file diff_result.json
 ```
 
-### Generate an HTML report
+### Generate an HTML report for FULL report
 
 ```bash
 python3 framediff.py compare --framework fedramp --old SSP_v1.docx --new SSP_v2.docx --output html --file report.html
 ```
-
-### Inspect detected controls in a document
-
-```bash
-python3 framediff.py analyze --framework fedramp --file SSP.docx
-```
-
 ---
 
 ## Supported Frameworks

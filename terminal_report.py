@@ -7,16 +7,16 @@ import sys
 import os
 from control_models import DiffResult, ControlChange
 
-RESET   = "\033[0m"
-BOLD    = "\033[1m"
-DIM     = "\033[2m"
-RED     = "\033[91m"
-GREEN   = "\033[92m"
-YELLOW  = "\033[93m"
-BLUE    = "\033[94m"
-CYAN    = "\033[96m"
-WHITE   = "\033[97m"
-GRAY    = "\033[90m"
+RESET = "\033[0m"
+BOLD = "\033[1m"
+DIM = "\033[2m"
+RED = "\033[91m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+BLUE = "\033[94m"
+CYAN = "\033[96m"
+WHITE = "\033[97m"
+GRAY = "\033[90m"
 
 _USE_COLOR = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
 
@@ -29,22 +29,22 @@ def _c(text: str, *codes: str) -> str:
 
 def _change_color(change_type: str) -> str:
     return {
-        "added":            GREEN,
-        "removed":          RED,
-        "modified":         YELLOW,
-        "expanded":         CYAN,
-        "reduced":          YELLOW,
+        "added": GREEN,
+        "removed": RED,
+        "modified": YELLOW,
+        "expanded": CYAN,
+        "reduced": YELLOW,
         "narrative_changed": BLUE,
     }.get(change_type, WHITE)
 
 
 def _change_label(change_type: str) -> str:
     return {
-        "added":            "ADDED",
-        "removed":          "REMOVED",
-        "modified":         "MODIFIED",
-        "expanded":         "EXPANDED",
-        "reduced":          "REDUCED",
+        "added": "ADDED",
+        "removed": "REMOVED",
+        "modified": "MODIFIED",
+        "expanded": "EXPANDED",
+        "reduced": "REDUCED",
         "narrative_changed": "REWORDING",
     }.get(change_type, change_type.upper())
 

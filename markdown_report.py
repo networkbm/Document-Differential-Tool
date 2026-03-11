@@ -6,11 +6,11 @@ import re
 from control_models import DiffResult
 
 CHANGE_EMOJI = {
-    "added":            "🟢",
-    "removed":          "🔴",
-    "modified":         "🟡",
-    "expanded":         "🔵",
-    "reduced":          "🟠",
+    "added": "🟢",
+    "removed": "🔴",
+    "modified": "🟡",
+    "expanded": "🔵",
+    "reduced": "🟠",
     "narrative_changed": "⬜",
 }
 

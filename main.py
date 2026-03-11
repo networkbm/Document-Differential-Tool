@@ -91,14 +91,10 @@ def cmd_compare(args):
 
     fmt = (args.output or "terminal").lower()
 
-    if fmt == "terminal":
-        output = terminal_report.render(result, verbose=getattr(args, "verbose", False))
-    elif fmt == "json":
-        output = json_report.render(result)
-    elif fmt == "markdown":
-        output = markdown_report.render(result, include_content=not args.quick_scan)
-    elif fmt == "html":
-        output = html_report.render(result, include_content=not args.quick_scan)
+    if fmt == "terminal": output = terminal_report.render(result, verbose=getattr(args, "verbose", False))
+    elif fmt == "json": output = json_report.render(result)
+    elif fmt == "markdown": output = markdown_report.render(result, include_content=not args.quick_scan)
+    elif fmt == "html": output = html_report.render(result, include_content=not args.quick_scan)
     else:
         print(f"Unknown output format '{fmt}'. Use: terminal, json, markdown, html", file=sys.stderr)
         sys.exit(1)
@@ -168,14 +164,10 @@ def cmd_report(args):
     )
 
     fmt = (args.output or "terminal").lower()
-    if fmt == "terminal":
-        output = terminal_report.render(result)
-    elif fmt == "markdown":
-        output = markdown_report.render(result, include_content=not args.quick_scan)
-    elif fmt == "html":
-        output = html_report.render(result, include_content=not args.quick_scan)
-    elif fmt == "json":
-        output = json_report.render(result)
+    if fmt == "terminal": output = terminal_report.render(result)
+    elif fmt == "markdown": output = markdown_report.render(result, include_content=not args.quick_scan)
+    elif fmt == "html": output = html_report.render(result, include_content=not args.quick_scan)
+    elif fmt == "json": output = json_report.render(result)
     else:
         print(f"Unknown output format '{fmt}'.", file=sys.stderr)
         sys.exit(1)
@@ -264,10 +256,10 @@ def main():
         sys.exit(0)
 
     dispatch = {
-        "compare":    cmd_compare,
-        "analyze":    cmd_analyze,
-        "report":     cmd_report,
-        "version":    cmd_version,
+        "compare": cmd_compare,
+        "analyze": cmd_analyze,
+        "report": cmd_report,
+        "version": cmd_version,
         "frameworks": cmd_frameworks,
     }
 

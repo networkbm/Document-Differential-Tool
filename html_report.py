@@ -7,11 +7,11 @@ import re
 from control_models import DiffResult
 
 CHANGE_COLORS = {
-    "added":            ("#d4edda", "#28a745", "ADDED"),
-    "removed":          ("#f8d7da", "#dc3545", "REMOVED"),
-    "modified":         ("#fff3cd", "#856404", "MODIFIED"),
-    "expanded":         ("#cce5ff", "#004085", "EXPANDED"),
-    "reduced":          ("#ffeeba", "#856404", "REDUCED"),
+    "added": ("#d4edda", "#28a745", "ADDED"),
+    "removed": ("#f8d7da", "#dc3545", "REMOVED"),
+    "modified": ("#fff3cd", "#856404", "MODIFIED"),
+    "expanded": ("#cce5ff", "#004085", "EXPANDED"),
+    "reduced": ("#ffeeba", "#856404", "REDUCED"),
     "narrative_changed": ("#e2e3e5", "#383d41", "REWORDING"),
 }
 
