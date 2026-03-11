@@ -2,6 +2,7 @@
 markdown_report.py — Renders a DiffResult as a Markdown document.
 """
 
+import re
 from control_models import DiffResult
 
 CHANGE_EMOJI = {
@@ -25,6 +26,15 @@ def _append_multiline_markdown(lines: list[str], title: str, text: str):
         else:
             lines.append(f"- {line}")
     lines.append("")
+
+
+def _normalize_display_content(text: str) -> str:
+    cleaned = []
+    for raw in text.splitlines():
+        line = raw.replace("\u00a0", " ").replace("\t", " ")
+        line = re.sub(r"[ ]{2,}", " ", line).rstrip()
+        cleaned.append(line)
+    return "\n".join(cleaned).strip()
 
 
 def render(result: DiffResult, include_content: bool = True) -> str:
@@ -78,12 +88,12 @@ def render(result: DiffResult, include_content: bool = True) -> str:
             lines.append("")
             lines.append("**Old:**")
             lines.append("```")
-            lines.append(change.old_content.strip())
+            lines.append(_normalize_display_content(change.old_content))
             lines.append("```")
             lines.append("")
             lines.append("**New:**")
             lines.append("```")
-            lines.append(change.new_content.strip())
+            lines.append(_normalize_display_content(change.new_content))
             lines.append("```")
             lines.append("")
             lines.append("</details>")

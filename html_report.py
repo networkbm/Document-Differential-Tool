@@ -2,8 +2,9 @@
 html_report.py — Renders a DiffResult as a self-contained HTML file.
 """
 
-from control_models import DiffResult
 import html as html_lib
+import re
+from control_models import DiffResult
 
 CHANGE_COLORS = {
     "added":            ("#d4edda", "#28a745", "ADDED"),
@@ -28,7 +29,16 @@ def _format_multiline(text: str) -> str:
     return "<br>".join(parts)
 
 
-def render(result: DiffResult) -> str:
+def _normalize_display_content(text: str) -> str:
+    cleaned = []
+    for raw in text.splitlines():
+        line = raw.replace("\u00a0", " ").replace("\t", " ")
+        line = re.sub(r"[ ]{2,}", " ", line).rstrip()
+        cleaned.append(line)
+    return "\n".join(cleaned).strip()
+
+
+def render(result: DiffResult, include_content: bool = True) -> str:
     s = result.summary
     changes_html = ""
 
@@ -38,11 +48,11 @@ def render(result: DiffResult) -> str:
         cid = html_lib.escape(change.control_id)
         desc_html = _format_multiline(change.description)
         impact_html = _format_multiline(change.impact or "")
-        old_c = html_lib.escape(change.old_content or "")
-        new_c = html_lib.escape(change.new_content or "")
+        old_c = html_lib.escape(_normalize_display_content(change.old_content or ""))
+        new_c = html_lib.escape(_normalize_display_content(change.new_content or ""))
 
         diff_section = ""
-        if change.old_content and change.new_content:
+        if include_content and change.old_content and change.new_content:
             diff_section = f"""
             <details>
               <summary style="cursor:pointer;color:#555;font-size:0.9em;">▶ View old/new content</summary>

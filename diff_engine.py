@@ -72,6 +72,13 @@ SSP_FIELDS = [
     ),
 ]
 
+TOOL_KEYWORDS = [
+    "splunk", "elastic", "elk", "crowdstrike", "sentinelone", "defender",
+    "okta", "ping", "cyberark", "tenable", "nessus", "qualys",
+    "aws config", "guardduty", "security hub", "wiz", "prisma",
+    "servicenow", "jira", "ansible", "terraform", "chef", "puppet",
+]
+
 
 def compute_diff(
     old_sections: Dict[str, ControlSection],
@@ -80,6 +87,7 @@ def compute_diff(
     old_doc: str = "",
     new_doc: str = "",
     detailed_descriptions: bool = False,
+    quick_scan: bool = False,
 ) -> DiffResult:
     result = DiffResult(framework=framework, old_doc=old_doc, new_doc=new_doc)
     summary = DiffSummary()
@@ -93,10 +101,12 @@ def compute_diff(
 
         if old_sec is None and new_sec is not None:
             description = "Control section added in new document."
-            if detailed_descriptions:
+            if detailed_descriptions and not quick_scan:
                 details = _added_removed_details(new_sec.content, added=True)
                 if details:
                     description = f"{description} {details}"
+            elif quick_scan:
+                description = _quick_scan_description("", new_sec.content)
             changes.append(ControlChange(
                 control_id=cid,
                 title=new_sec.title,
@@ -109,10 +119,12 @@ def compute_diff(
 
         elif old_sec is not None and new_sec is None:
             description = "Control section removed from new document."
-            if detailed_descriptions:
+            if detailed_descriptions and not quick_scan:
                 details = _added_removed_details(old_sec.content, added=False)
                 if details:
                     description = f"{description} {details}"
+            elif quick_scan:
+                description = _quick_scan_description(old_sec.content, "")
             changes.append(ControlChange(
                 control_id=cid,
                 title=old_sec.title,
@@ -124,7 +136,12 @@ def compute_diff(
             summary.removed += 1
 
         else:
-            change = _compare_sections(old_sec, new_sec, detailed_descriptions=detailed_descriptions)
+            change = _compare_sections(
+                old_sec,
+                new_sec,
+                detailed_descriptions=detailed_descriptions,
+                quick_scan=quick_scan,
+            )
             if change:
                 changes.append(change)
                 if change.change_type == "expanded":
@@ -147,8 +164,8 @@ def _compare_sections(
     old: ControlSection,
     new: ControlSection,
     detailed_descriptions: bool = False,
+    quick_scan: bool = False,
 ) -> ControlChange | None:
-    """Compare two versions of the same section. Return a ControlChange or None."""
     old_text = old.content.strip()
     new_text = new.content.strip()
 
@@ -179,14 +196,17 @@ def _compare_sections(
         description = _describe_modification(old_norm, new_norm, ratio)
         impact = _modification_impact(old_norm, new_norm)
 
+    if quick_scan:
+        description = _quick_scan_description(old_text, new_text)
+
     ssp_details = _ssp_field_changes(old_text, new_text, detailed=detailed_descriptions)
-    if ssp_details:
+    if ssp_details and not quick_scan:
         if detailed_descriptions:
             description = f"{description}\n\nSSP field changes:\n{ssp_details}"
         else:
             description = f"{description} {ssp_details}"
 
-    if detailed_descriptions and not ssp_details:
+    if detailed_descriptions and not ssp_details and not quick_scan:
         details = _detailed_sentence_changes(old_text, new_text)
         if details:
             description = f"{description}\n\nDetailed changes:\n{details}"
@@ -203,21 +223,18 @@ def _compare_sections(
 
 
 def _diff_lines(old: str, new: str) -> List[str]:
-    """Get unified diff lines between two strings."""
     old_lines = old.splitlines(keepends=True)
     new_lines = new.splitlines(keepends=True)
     return list(difflib.unified_diff(old_lines, new_lines, lineterm=""))
 
 
 def _first_diff(old: str, new: str) -> str:
-    """Return a short human description of the first meaningful change."""
     sm = difflib.SequenceMatcher(None, old.split(), new.split())
-    ops = sm.get_opcodes()
-    for tag, i1, i2, j1, j2 in ops:
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
         if tag == "replace":
             removed = " ".join(old.split()[i1:i2])[:60]
             added = " ".join(new.split()[j1:j2])[:60]
-            return f'"{removed}" → "{added}"'
+            return f'"{removed}" -> "{added}"'
         if tag == "delete":
             removed = " ".join(old.split()[i1:i2])[:80]
             return f'Removed: "{removed}"'
@@ -448,6 +465,57 @@ def _ssp_field_changes(old_text: str, new_text: str, detailed: bool = False) -> 
     return f"SSP fields changed: {preview}."
 
 
+def _find_all(text: str, pattern: str) -> set[str]:
+    return set(re.findall(pattern, text, flags=re.IGNORECASE))
+
+
+def _quick_scan_description(old: str, new: str) -> str:
+    old_lower = old.lower()
+    new_lower = new.lower()
+    bullets: List[str] = []
+
+    if "http://" in old_lower and "https://" in new_lower and "https://" not in old_lower:
+        bullets.append("Protocol updated: HTTP -> HTTPS")
+    elif "https://" in old_lower and "http://" in new_lower and "http://" not in old_lower:
+        bullets.append("Protocol downgraded: HTTPS -> HTTP")
+
+    old_tls = _find_all(old_lower, r"tls\s*1\.[0-3]")
+    new_tls = _find_all(new_lower, r"tls\s*1\.[0-3]")
+    added_tls = sorted(new_tls - old_tls)
+    removed_tls = sorted(old_tls - new_tls)
+    if added_tls:
+        bullets.append(f"TLS versions added: {', '.join(added_tls)}")
+    if removed_tls:
+        bullets.append(f"TLS versions removed: {', '.join(removed_tls)}")
+
+    old_ports = _find_all(old_lower, r"\bport\s+(\d{2,5})\b")
+    new_ports = _find_all(new_lower, r"\bport\s+(\d{2,5})\b")
+    if old_ports != new_ports and (old_ports or new_ports):
+        added_ports = sorted(new_ports - old_ports)
+        removed_ports = sorted(old_ports - new_ports)
+        if added_ports:
+            bullets.append(f"Ports added: {', '.join(added_ports)}")
+        if removed_ports:
+            bullets.append(f"Ports removed: {', '.join(removed_ports)}")
+
+    added_tools = [t for t in TOOL_KEYWORDS if t in new_lower and t not in old_lower]
+    if added_tools:
+        bullets.append(f"New tools mentioned: {', '.join(added_tools[:4])}")
+
+    removed_tools = [t for t in TOOL_KEYWORDS if t in old_lower and t not in new_lower]
+    if removed_tools:
+        bullets.append(f"Tools removed: {', '.join(removed_tools[:4])}")
+
+    if _ssp_field_changes(old, new, detailed=True):
+        bullets.append("SSP fields updated (Responsible Role/Status/Origination/Implementation)")
+
+    if not bullets:
+        return f"Quick scan: {_first_diff(' '.join(old.split()), ' '.join(new.split()))}"
+
+    bullets = bullets[:6]
+    return "Quick scan:\n" + "\n".join([f"- {b}" for b in bullets])
+
+
 def _split_sentences(text: str) -> List[str]:
     parts = re.split(r"(?<=[.!?])\s+", text.strip())
     return [p.strip() for p in parts if p.strip()]
@@ -521,9 +589,6 @@ def _detailed_sentence_changes(old: str, new: str) -> str:
 
 
 def inline_diff(old: str, new: str) -> str:
-    """
-    Returns a human-readable inline diff showing added (+) and removed (-) lines.
-    """
     old_lines = old.strip().splitlines()
     new_lines = new.strip().splitlines()
     diff = difflib.unified_diff(old_lines, new_lines, lineterm="", n=2)

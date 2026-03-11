@@ -78,7 +78,8 @@ def cmd_compare(args):
         framework=framework_key,
         old_doc=args.old,
         new_doc=args.new,
-        detailed_descriptions=bool(getattr(args, "out_file", None)),
+        detailed_descriptions=bool(getattr(args, "out_file", None)) and not args.quick_scan,
+        quick_scan=args.quick_scan,
     )
 
     if args.ignore_formatting:
@@ -95,9 +96,9 @@ def cmd_compare(args):
     elif fmt == "json":
         output = json_report.render(result)
     elif fmt == "markdown":
-        output = markdown_report.render(result)
+        output = markdown_report.render(result, include_content=not args.quick_scan)
     elif fmt == "html":
-        output = html_report.render(result)
+        output = html_report.render(result, include_content=not args.quick_scan)
     else:
         print(f"Unknown output format '{fmt}'. Use: terminal, json, markdown, html", file=sys.stderr)
         sys.exit(1)
@@ -170,9 +171,9 @@ def cmd_report(args):
     if fmt == "terminal":
         output = terminal_report.render(result)
     elif fmt == "markdown":
-        output = markdown_report.render(result)
+        output = markdown_report.render(result, include_content=not args.quick_scan)
     elif fmt == "html":
-        output = html_report.render(result)
+        output = html_report.render(result, include_content=not args.quick_scan)
     elif fmt == "json":
         output = json_report.render(result)
     else:
@@ -230,6 +231,8 @@ Examples:
                            help="Suppress narrative/rewording-only changes")
     p_compare.add_argument("--verbose", "-v", action="store_true",
                            help="Show inline diffs for each change")
+    p_compare.add_argument("--quick-scan", action="store_true",
+                           help="Show concise quick-scan findings (protocol, tooling, config signals)")
 
     p_analyze = sub.add_parser("analyze", help="List control sections detected in a document")
     p_analyze.add_argument("--framework", "-f", required=True)
@@ -242,6 +245,8 @@ Examples:
                           choices=["terminal", "json", "markdown", "html"])
     p_report.add_argument("--file", dest="out_file", metavar="PATH",
                           help="Write output to file")
+    p_report.add_argument("--quick-scan", action="store_true",
+                          help="Hide old/new content blocks in rendered reports")
 
     sub.add_parser("version", help="Show version")
 
