@@ -78,6 +78,7 @@ def cmd_compare(args):
         framework=framework_key,
         old_doc=args.old,
         new_doc=args.new,
+        detailed_descriptions=bool(getattr(args, "out_file", None)),
     )
 
     if args.ignore_formatting:

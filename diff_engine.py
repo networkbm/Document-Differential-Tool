@@ -61,6 +61,7 @@ def compute_diff(
     framework: str = "unknown",
     old_doc: str = "",
     new_doc: str = "",
+    detailed_descriptions: bool = False,
 ) -> DiffResult:
     result = DiffResult(framework=framework, old_doc=old_doc, new_doc=new_doc)
     summary = DiffSummary()
@@ -73,29 +74,39 @@ def compute_diff(
         new_sec = new_sections.get(cid)
 
         if old_sec is None and new_sec is not None:
+            description = "Control section added in new document."
+            if detailed_descriptions:
+                details = _added_removed_details(new_sec.content, added=True)
+                if details:
+                    description = f"{description} {details}"
             changes.append(ControlChange(
                 control_id=cid,
                 title=new_sec.title,
                 change_type="added",
                 new_content=new_sec.content,
-                description=f"Control section added in new document.",
+                description=description,
                 impact="New requirement introduced",
             ))
             summary.added += 1
 
         elif old_sec is not None and new_sec is None:
+            description = "Control section removed from new document."
+            if detailed_descriptions:
+                details = _added_removed_details(old_sec.content, added=False)
+                if details:
+                    description = f"{description} {details}"
             changes.append(ControlChange(
                 control_id=cid,
                 title=old_sec.title,
                 change_type="removed",
                 old_content=old_sec.content,
-                description="Control section removed from new document.",
+                description=description,
                 impact="Requirement no longer present — review needed",
             ))
             summary.removed += 1
 
         else:
-            change = _compare_sections(old_sec, new_sec)
+            change = _compare_sections(old_sec, new_sec, detailed_descriptions=detailed_descriptions)
             if change:
                 changes.append(change)
                 if change.change_type == "expanded":
@@ -114,7 +125,11 @@ def compute_diff(
     return result
 
 
-def _compare_sections(old: ControlSection, new: ControlSection) -> ControlChange | None:
+def _compare_sections(
+    old: ControlSection,
+    new: ControlSection,
+    detailed_descriptions: bool = False,
+) -> ControlChange | None:
     """Compare two versions of the same section. Return a ControlChange or None."""
     old_text = old.content.strip()
     new_text = new.content.strip()
@@ -145,6 +160,11 @@ def _compare_sections(old: ControlSection, new: ControlSection) -> ControlChange
         change_type = "modified"
         description = _describe_modification(old_norm, new_norm, ratio)
         impact = _modification_impact(old_norm, new_norm)
+
+    if detailed_descriptions:
+        details = _detailed_sentence_changes(old_norm, new_norm)
+        if details:
+            description = f"{description}\n\nDetailed changes:\n{details}"
 
     return ControlChange(
         control_id=old.control_id,
@@ -308,6 +328,72 @@ def _dedupe(items: List[str]) -> List[str]:
             seen.add(item)
             output.append(item)
     return output
+
+
+def _split_sentences(text: str) -> List[str]:
+    parts = re.split(r"(?<=[.!?])\s+", text.strip())
+    return [p.strip() for p in parts if p.strip()]
+
+
+def _clip(text: str, max_len: int = 220) -> str:
+    compact = " ".join(text.split())
+    if len(compact) <= max_len:
+        return compact
+    return compact[: max_len - 1].rstrip() + "…"
+
+
+def _added_removed_details(content: str, added: bool) -> str:
+    sentences = _split_sentences(content)
+    if not sentences:
+        return ""
+    if len(sentences) == 1:
+        prefix = "Added text:" if added else "Removed text:"
+        return f'{prefix} "{_clip(sentences[0])}"'
+    prefix = "Added content includes" if added else "Removed content included"
+    items = "\n".join([f"- {_clip(s)}" for s in sentences])
+    return f"{prefix} {len(sentences)} sentence(s):\n{items}"
+
+
+def _detailed_sentence_changes(old: str, new: str) -> str:
+    old_sentences = _split_sentences(old)
+    new_sentences = _split_sentences(new)
+    if not old_sentences and not new_sentences:
+        return ""
+
+    matcher = difflib.SequenceMatcher(None, old_sentences, new_sentences)
+    lines: List[str] = []
+
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            continue
+
+        if tag == "replace":
+            old_block = old_sentences[i1:i2]
+            new_block = new_sentences[j1:j2]
+            max_len = max(len(old_block), len(new_block))
+            for idx in range(max_len):
+                old_text = old_block[idx] if idx < len(old_block) else ""
+                new_text = new_block[idx] if idx < len(new_block) else ""
+                if old_text and new_text:
+                    lines.append(f'- Replaced: "{_clip(old_text)}" -> "{_clip(new_text)}"')
+                elif old_text:
+                    lines.append(f'- Removed: "{_clip(old_text)}"')
+                elif new_text:
+                    lines.append(f'- Added: "{_clip(new_text)}"')
+            continue
+
+        if tag == "delete":
+            for sentence in old_sentences[i1:i2]:
+                lines.append(f'- Removed: "{_clip(sentence)}"')
+            continue
+
+        if tag == "insert":
+            for sentence in new_sentences[j1:j2]:
+                lines.append(f'- Added: "{_clip(sentence)}"')
+
+    if not lines:
+        return ""
+    return "\n".join(lines)
 
 
 def inline_diff(old: str, new: str) -> str:
