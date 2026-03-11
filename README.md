@@ -1,6 +1,6 @@
 # FrameDiff
 
-**Compliance document diff tool — framework aware comparison for FedRAMP, NIST 800-53, CMMC, ISO 27001, and SOC 2.**
+**Compliance document differential tool — framework aware comparison for FedRAMP, NIST 800-53, CMMC, ISO 27001, and SOC 2.**
 
 **Privacy first:** Runs entirely locally
 
