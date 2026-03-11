@@ -17,10 +17,10 @@ MAX_DETAILED_EDITS = 12
 MAX_EDIT_TOKENS = 12
 
 STRENGTHENING_SIGNALS = {
-    "must": "stronger requirement language ('must')",
-    "shall": "stronger requirement language ('shall')",
-    "required": "stronger requirement language ('required')",
-    "mandatory": "stronger requirement language ('mandatory')",
+    "must": "stronger requirement language: must",
+    "shall": "stronger requirement language: shall",
+    "required": "stronger requirement language: required",
+    "mandatory": "stronger requirement language: mandatory",
     "enforced": "explicit enforcement language",
     "all users": "broader scope (all users)",
     "automatically": "automation added",
@@ -38,9 +38,9 @@ STRENGTHENING_SIGNALS = {
 
 WEAKENING_SIGNALS = {
     "optional": "requirement made optional",
-    "may": "weaker discretionary language ('may')",
-    "if applicable": "scope conditionalized ('if applicable')",
-    "when possible": "implementation relaxed ('when possible')",
+    "may": "weaker discretionary language: may",
+    "if applicable": "scope conditionalized: if applicable",
+    "when possible": "implementation relaxed: when possible",
     "no longer": "explicit removal language",
     "deprecated": "capability marked deprecated",
     "manual": "manual process language introduced",
