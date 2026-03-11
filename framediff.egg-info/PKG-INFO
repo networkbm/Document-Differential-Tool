@@ -1,0 +1,212 @@
+Metadata-Version: 2.4
+Name: framediff
+Version: 1.0.0
+Summary: Compliance document diff tool — framework-aware comparison for FedRAMP, NIST, CMMC, ISO 27001, SOC 2
+Author: FrameDiff Contributors
+License: MIT
+Classifier: Programming Language :: Python :: 3.11
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Topic :: Security
+Classifier: Topic :: Utilities
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: python-docx>=1.0
+Requires-Dist: PyYAML>=6.0
+Provides-Extra: pdf
+Requires-Dist: pypdf>=3.0; extra == "pdf"
+Provides-Extra: rich
+Requires-Dist: rich>=13.0; extra == "rich"
+Dynamic: author
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: license
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# FrameDiff
+
+**Compliance document diff tool — framework-aware comparison for FedRAMP, NIST 800-53, CMMC, ISO 27001, and SOC 2.**
+
+FrameDiff compares two versions of a compliance document and reports meaningful, structured changes — not just raw text diffs. It understands control IDs, section structure, and compliance frameworks.
+
+> 🔒 **Privacy-first:** Runs entirely locally. No cloud services, no APIs, no telemetry.
+
+---
+
+## Features
+
+- **Framework-aware** — understands FedRAMP, NIST 800-53, CMMC, ISO 27001, SOC 2 control IDs
+- **Multi-format** — DOCX, Markdown, TXT, JSON, YAML, CSV, PDF (text-based)
+- **Smart change classification** — Added, Removed, Modified, Expanded, Reduced, Rewording
+- **Impact analysis** — flags security-strengthening and security-weakening changes
+- **Multiple output formats** — terminal (color), JSON, Markdown, HTML
+- **No cloud** — 100% local processing
+
+---
+
+## Installation
+
+```bash
+git clone https://github.com/your-org/framediff.git
+cd framediff
+pip install -e .
+```
+
+Or run directly without installing:
+
+```bash
+python framediff.py compare --framework fedramp --old old.docx --new new.docx
+```
+
+**Dependencies:**
+- Python 3.11+
+- `python-docx` (for DOCX files)
+- `PyYAML` (for YAML files)
+- Optional: `pypdf` (for PDF files)
+
+---
+
+## Quick Start
+
+### Compare two SSP versions
+
+```bash
+framediff compare \
+  --framework fedramp \
+  --old SSP_v1.docx \
+  --new SSP_v2.docx
+```
+
+### Save as JSON
+
+```bash
+framediff compare \
+  --framework nist80053 \
+  --old policy_v1.md \
+  --new policy_v2.md \
+  --output json \
+  --file diff_result.json
+```
+
+### Generate an HTML report
+
+```bash
+framediff compare \
+  --framework fedramp \
+  --old SSP_v1.docx \
+  --new SSP_v2.docx \
+  --output html \
+  --file report.html
+```
+
+### Inspect detected controls in a document
+
+```bash
+framediff analyze --framework fedramp --file SSP.docx
+```
+
+---
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `framediff compare` | Compare two compliance documents |
+| `framediff analyze` | List detected controls in a document |
+| `framediff report` | Re-render a saved JSON diff result |
+| `framediff frameworks` | List available frameworks |
+| `framediff version` | Show version |
+
+---
+
+## Options (`compare`)
+
+| Option | Description |
+|--------|-------------|
+| `--framework` | Framework context: `fedramp`, `nist80053`, `cmmc`, `iso27001`, `soc2` |
+| `--old PATH` | Path to the original document |
+| `--new PATH` | Path to the updated document |
+| `--output FORMAT` | Output format: `terminal` (default), `json`, `markdown`, `html` |
+| `--file PATH` | Write output to a file instead of stdout |
+| `--strict-controls` | Only report changes for known framework control IDs |
+| `--ignore-formatting` | Suppress rewording-only changes |
+| `--verbose` | Show inline diffs for each change |
+
+---
+
+## Change Types
+
+| Type | Description |
+|------|-------------|
+| `added` | Section present in new document only |
+| `removed` | Section absent from new document |
+| `modified` | Content changed |
+| `expanded` | Content grew significantly (≥20%) |
+| `reduced` | Content shrank significantly (≥20%) |
+| `narrative_changed` | Minor rewording, substance unchanged |
+
+---
+
+## Supported Frameworks
+
+| Framework | Controls |
+|-----------|----------|
+| FedRAMP | 160 |
+| NIST SP 800-53 | 253 |
+| CMMC | 98 |
+| ISO 27001 | 149 |
+| SOC 2 | 61 |
+
+---
+
+## Supported File Formats
+
+| Format | Extensions |
+|--------|-----------|
+| Word Document | `.docx` |
+| Markdown | `.md` |
+| Plain Text | `.txt` |
+| JSON | `.json` |
+| YAML | `.yaml`, `.yml` |
+| CSV | `.csv` |
+| PDF (text-based) | `.pdf` |
+
+---
+
+## Project Structure
+
+```
+framediff/
+├── cli/
+│   └── main.py              # CLI entry point
+├── loaders/
+│   └── __init__.py          # Document loaders (docx, md, txt, json, yaml, csv, pdf)
+├── parser/
+│   └── control_parser.py    # Control section structure parser
+├── frameworks/
+│   ├── fedramp.json
+│   ├── nist80053.json
+│   ├── cmmc.json
+│   ├── iso27001.json
+│   └── soc2.json
+├── diff/
+│   └── diff_engine.py       # Comparison and change classification
+├── report/
+│   ├── terminal_report.py
+│   ├── json_report.py
+│   ├── markdown_report.py
+│   └── html_report.py
+├── models/
+│   └── control_models.py    # Data models
+└── utils/
+    └── helpers.py           # Shared utilities
+```
+
+---
+
+## License
+
+MIT

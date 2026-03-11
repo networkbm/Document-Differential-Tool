@@ -1,0 +1,8 @@
+README.md
+setup.py
+framediff.egg-info/PKG-INFO
+framediff.egg-info/SOURCES.txt
+framediff.egg-info/dependency_links.txt
+framediff.egg-info/entry_points.txt
+framediff.egg-info/requires.txt
+framediff.egg-info/top_level.txt
