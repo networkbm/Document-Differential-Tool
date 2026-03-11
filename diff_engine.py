@@ -54,6 +54,22 @@ CADENCE_TO_DAYS = {
     "yearly": 365,
 }
 
+SSP_FIELDS = [
+    ("Responsible Role", ["responsible role", "responsible roles"]),
+    ("Implementation Status", ["implementation status"]),
+    ("Control Origination", ["control origination", "origination"]),
+    (
+        "Control Implementation",
+        [
+            "control implementation",
+            "what is the solution and how is it implemented",
+            "what is the solution and hos is it implemented",
+            "how is it implemented",
+            "implementation description",
+        ],
+    ),
+]
+
 
 def compute_diff(
     old_sections: Dict[str, ControlSection],
@@ -160,6 +176,13 @@ def _compare_sections(
         change_type = "modified"
         description = _describe_modification(old_norm, new_norm, ratio)
         impact = _modification_impact(old_norm, new_norm)
+
+    ssp_details = _ssp_field_changes(old_text, new_text, detailed=detailed_descriptions)
+    if ssp_details:
+        if detailed_descriptions:
+            description = f"{description}\n\nSSP field changes:\n{ssp_details}"
+        else:
+            description = f"{description} {ssp_details}"
 
     if detailed_descriptions:
         details = _detailed_sentence_changes(old_norm, new_norm)
@@ -328,6 +351,99 @@ def _dedupe(items: List[str]) -> List[str]:
             seen.add(item)
             output.append(item)
     return output
+
+
+def _normalize_label(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    return " ".join(text.split())
+
+
+def _extract_ssp_fields(text: str) -> Dict[str, str]:
+    fields: Dict[str, List[str]] = {}
+    current_field = None
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            if current_field and fields.get(current_field):
+                fields[current_field].append("")
+            continue
+
+        normalized = _normalize_label(line)
+        matched_field = None
+        remainder = ""
+
+        for field_name, aliases in SSP_FIELDS:
+            for alias in aliases:
+                if normalized == alias or normalized.startswith(alias + " "):
+                    matched_field = field_name
+                    pattern = rf"^\s*[#\-\*\d\.\)\(\s]*{re.escape(alias)}\s*[:\-–—]?\s*(.*)$"
+                    m = re.match(pattern, line, flags=re.IGNORECASE)
+                    remainder = (m.group(1) if m else "").strip()
+                    break
+            if matched_field:
+                break
+
+        if matched_field:
+            current_field = matched_field
+            fields.setdefault(current_field, [])
+            if remainder:
+                fields[current_field].append(remainder)
+            continue
+
+        if current_field:
+            fields.setdefault(current_field, []).append(line)
+
+    result: Dict[str, str] = {}
+    for key, values in fields.items():
+        compact = " ".join(v for v in values if v.strip()).strip()
+        if compact:
+            result[key] = compact
+    return result
+
+
+def _ssp_field_changes(old_text: str, new_text: str, detailed: bool = False) -> str:
+    old_fields = _extract_ssp_fields(old_text)
+    new_fields = _extract_ssp_fields(new_text)
+    changed = []
+
+    for field_name, _ in SSP_FIELDS:
+        old_val = old_fields.get(field_name)
+        new_val = new_fields.get(field_name)
+        if old_val is None and new_val is None:
+            continue
+        old_norm = " ".join((old_val or "").split())
+        new_norm = " ".join((new_val or "").split())
+        if old_norm == new_norm:
+            continue
+        changed.append((field_name, old_val, new_val))
+
+    if not changed:
+        return ""
+
+    if detailed:
+        lines = []
+        for field_name, old_val, new_val in changed:
+            if old_val and new_val:
+                lines.append(f'- {field_name}: "{_clip(old_val, 140)}" -> "{_clip(new_val, 140)}"')
+            elif new_val:
+                lines.append(f'- {field_name}: added "{_clip(new_val, 140)}"')
+            else:
+                lines.append(f'- {field_name}: removed "{_clip(old_val, 140)}"')
+        return "\n".join(lines)
+
+    parts = []
+    for field_name, old_val, new_val in changed:
+        if field_name == "Implementation Status" and old_val and new_val:
+            parts.append(f'{field_name} ({_clip(old_val, 40)} -> {_clip(new_val, 40)})')
+        else:
+            parts.append(field_name)
+
+    preview = ", ".join(parts[:3])
+    if len(parts) > 3:
+        preview += f", +{len(parts) - 3} more"
+    return f"SSP fields changed: {preview}."
 
 
 def _split_sentences(text: str) -> List[str]:
