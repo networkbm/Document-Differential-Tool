@@ -6,6 +6,10 @@
 
 ---
 
+## Project Status: Work in Progress
+
+**FrameDiff is currently under active development**
+
 ## Features
 
 - **Framework-aware** — understands FedRAMP, NIST 800-53, CMMC, ISO 27001, SOC 2 control IDs
