@@ -472,21 +472,21 @@ def _find_all(text: str, pattern: str) -> set[str]:
 def _quick_scan_description(old: str, new: str) -> str:
     old_lower = old.lower()
     new_lower = new.lower()
-    bullets: List[str] = []
+    findings: List[str] = []
 
     if "http://" in old_lower and "https://" in new_lower and "https://" not in old_lower:
-        bullets.append("Protocol updated: HTTP -> HTTPS")
+        findings.append("protocol HTTP -> HTTPS")
     elif "https://" in old_lower and "http://" in new_lower and "http://" not in old_lower:
-        bullets.append("Protocol downgraded: HTTPS -> HTTP")
+        findings.append("protocol HTTPS -> HTTP")
 
     old_tls = _find_all(old_lower, r"tls\s*1\.[0-3]")
     new_tls = _find_all(new_lower, r"tls\s*1\.[0-3]")
     added_tls = sorted(new_tls - old_tls)
     removed_tls = sorted(old_tls - new_tls)
     if added_tls:
-        bullets.append(f"TLS versions added: {', '.join(added_tls)}")
+        findings.append(f"TLS added ({', '.join(added_tls)})")
     if removed_tls:
-        bullets.append(f"TLS versions removed: {', '.join(removed_tls)}")
+        findings.append(f"TLS removed ({', '.join(removed_tls)})")
 
     old_ports = _find_all(old_lower, r"\bport\s+(\d{2,5})\b")
     new_ports = _find_all(new_lower, r"\bport\s+(\d{2,5})\b")
@@ -494,26 +494,25 @@ def _quick_scan_description(old: str, new: str) -> str:
         added_ports = sorted(new_ports - old_ports)
         removed_ports = sorted(old_ports - new_ports)
         if added_ports:
-            bullets.append(f"Ports added: {', '.join(added_ports)}")
+            findings.append(f"ports added ({', '.join(added_ports)})")
         if removed_ports:
-            bullets.append(f"Ports removed: {', '.join(removed_ports)}")
+            findings.append(f"ports removed ({', '.join(removed_ports)})")
 
     added_tools = [t for t in TOOL_KEYWORDS if t in new_lower and t not in old_lower]
-    if added_tools:
-        bullets.append(f"New tools mentioned: {', '.join(added_tools[:4])}")
-
     removed_tools = [t for t in TOOL_KEYWORDS if t in old_lower and t not in new_lower]
+    if added_tools:
+        findings.append(f"new tools ({', '.join(added_tools[:4])})")
     if removed_tools:
-        bullets.append(f"Tools removed: {', '.join(removed_tools[:4])}")
+        findings.append(f"tools removed ({', '.join(removed_tools[:4])})")
 
     if _ssp_field_changes(old, new, detailed=True):
-        bullets.append("SSP fields updated (Responsible Role/Status/Origination/Implementation)")
+        findings.append("SSP fields updated")
 
-    if not bullets:
-        return f"Quick scan: {_first_diff(' '.join(old.split()), ' '.join(new.split()))}"
+    if not findings:
+        return f"Quick scan summary: {_first_diff(' '.join(old.split()), ' '.join(new.split()))}"
 
-    bullets = bullets[:6]
-    return "Quick scan:\n" + "\n".join([f"- {b}" for b in bullets])
+    findings = findings[:6]
+    return "Quick scan summary: " + "; ".join(findings) + "."
 
 
 def _split_sentences(text: str) -> List[str]:
