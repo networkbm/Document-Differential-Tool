@@ -14,6 +14,19 @@ CHANGE_EMOJI = {
 }
 
 
+def _append_multiline_markdown(lines: list[str], title: str, text: str):
+    lines.append(f"**{title}:**")
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("- "):
+            lines.append(line)
+        else:
+            lines.append(f"- {line}")
+    lines.append("")
+
+
 def render(result: DiffResult, include_content: bool = True) -> str:
     s = result.summary
     lines = []
@@ -29,8 +42,8 @@ def render(result: DiffResult, include_content: bool = True) -> str:
     lines.append("")
     lines.append("## Summary")
     lines.append("")
-    lines.append(f"| Metric | Count |")
-    lines.append(f"|--------|-------|")
+    lines.append("| Metric | Count |")
+    lines.append("|--------|-------|")
     lines.append(f"| Controls Modified | {s.modified + s.expanded + s.reduced} |")
     lines.append(f"| Controls Added | {s.added} |")
     lines.append(f"| Controls Removed | {s.removed} |")
@@ -53,15 +66,15 @@ def render(result: DiffResult, include_content: bool = True) -> str:
         title = change.title or change.control_id
         lines.append(f"### {emoji} {change.control_id} — {title}")
         lines.append("")
-        lines.append(f"**Change Type:** `{change.change_type.upper()}`  ")
-        lines.append(f"**Description:** {change.description}  ")
-        if change.impact:
-            lines.append(f"**Impact:** {change.impact}  ")
+        lines.append(f"**Change Type:** `{change.change_type.upper()}`")
         lines.append("")
+        _append_multiline_markdown(lines, "Description", change.description)
+        if change.impact:
+            _append_multiline_markdown(lines, "Impact", change.impact)
 
         if include_content and change.old_content and change.new_content:
             lines.append("<details>")
-            lines.append("<summary>View diff</summary>")
+            lines.append("<summary>View old/new content</summary>")
             lines.append("")
             lines.append("**Old:**")
             lines.append("```")

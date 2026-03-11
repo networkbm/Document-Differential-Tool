@@ -13,6 +13,8 @@ EXPAND_RATIO = 1.20
 REDUCE_RATIO = 0.80
 MINOR_CHANGE_RATIO = 0.95
 SIGNIFICANT_CHANGE = 0.50
+MAX_DETAILED_EDITS = 12
+MAX_EDIT_TOKENS = 12
 
 STRENGTHENING_SIGNALS = {
     "must": "stronger requirement language ('must')",
@@ -184,8 +186,8 @@ def _compare_sections(
         else:
             description = f"{description} {ssp_details}"
 
-    if detailed_descriptions:
-        details = _detailed_sentence_changes(old_norm, new_norm)
+    if detailed_descriptions and not ssp_details:
+        details = _detailed_sentence_changes(old_text, new_text)
         if details:
             description = f"{description}\n\nDetailed changes:\n{details}"
 
@@ -216,10 +218,10 @@ def _first_diff(old: str, new: str) -> str:
             removed = " ".join(old.split()[i1:i2])[:60]
             added = " ".join(new.split()[j1:j2])[:60]
             return f'"{removed}" → "{added}"'
-        elif tag == "delete":
+        if tag == "delete":
             removed = " ".join(old.split()[i1:i2])[:80]
             return f'Removed: "{removed}"'
-        elif tag == "insert":
+        if tag == "insert":
             added = " ".join(new.split()[j1:j2])[:80]
             return f'Added: "{added}"'
     return "Content changed."
@@ -470,45 +472,51 @@ def _added_removed_details(content: str, added: bool) -> str:
     return f"{prefix} {len(sentences)} sentence(s):\n{items}"
 
 
+def _tokenize_change_units(text: str) -> List[str]:
+    return re.findall(r"[A-Za-z0-9][A-Za-z0-9_./-]*", text)
+
+
+def _format_edit_chunk(tokens: List[str]) -> str:
+    if not tokens:
+        return ""
+    return _clip(" ".join(tokens[:MAX_EDIT_TOKENS]), 90)
+
+
 def _detailed_sentence_changes(old: str, new: str) -> str:
-    old_sentences = _split_sentences(old)
-    new_sentences = _split_sentences(new)
-    if not old_sentences and not new_sentences:
+    old_tokens = _tokenize_change_units(old)
+    new_tokens = _tokenize_change_units(new)
+    if not old_tokens and not new_tokens:
         return ""
 
-    matcher = difflib.SequenceMatcher(None, old_sentences, new_sentences)
+    matcher = difflib.SequenceMatcher(None, old_tokens, new_tokens)
     lines: List[str] = []
+    truncated = False
 
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag == "equal":
             continue
 
+        old_chunk = _format_edit_chunk(old_tokens[i1:i2])
+        new_chunk = _format_edit_chunk(new_tokens[j1:j2])
+
         if tag == "replace":
-            old_block = old_sentences[i1:i2]
-            new_block = new_sentences[j1:j2]
-            max_len = max(len(old_block), len(new_block))
-            for idx in range(max_len):
-                old_text = old_block[idx] if idx < len(old_block) else ""
-                new_text = new_block[idx] if idx < len(new_block) else ""
-                if old_text and new_text:
-                    lines.append(f'- Replaced: "{_clip(old_text)}" -> "{_clip(new_text)}"')
-                elif old_text:
-                    lines.append(f'- Removed: "{_clip(old_text)}"')
-                elif new_text:
-                    lines.append(f'- Added: "{_clip(new_text)}"')
-            continue
+            if old_chunk and new_chunk and old_chunk != new_chunk:
+                lines.append(f'- Changed: "{old_chunk}" -> "{new_chunk}"')
+        elif tag == "delete":
+            if old_chunk:
+                lines.append(f'- Removed: "{old_chunk}"')
+        elif tag == "insert":
+            if new_chunk:
+                lines.append(f'- Added: "{new_chunk}"')
 
-        if tag == "delete":
-            for sentence in old_sentences[i1:i2]:
-                lines.append(f'- Removed: "{_clip(sentence)}"')
-            continue
-
-        if tag == "insert":
-            for sentence in new_sentences[j1:j2]:
-                lines.append(f'- Added: "{_clip(sentence)}"')
+        if len(lines) >= MAX_DETAILED_EDITS:
+            truncated = True
+            break
 
     if not lines:
         return ""
+    if truncated:
+        lines.append("- Additional edits omitted for brevity.")
     return "\n".join(lines)
 
 

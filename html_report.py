@@ -15,6 +15,19 @@ CHANGE_COLORS = {
 }
 
 
+def _format_multiline(text: str) -> str:
+    parts = []
+    for raw in text.splitlines():
+        line = html_lib.escape(raw.strip())
+        if not line:
+            continue
+        if line.startswith("- "):
+            parts.append(f"&bull; {line[2:]}")
+        else:
+            parts.append(line)
+    return "<br>".join(parts)
+
+
 def render(result: DiffResult) -> str:
     s = result.summary
     changes_html = ""
@@ -23,8 +36,8 @@ def render(result: DiffResult) -> str:
         bg, fg, label = CHANGE_COLORS.get(change.change_type, ("#fff", "#000", change.change_type.upper()))
         title = html_lib.escape(change.title or change.control_id)
         cid = html_lib.escape(change.control_id)
-        desc = html_lib.escape(change.description)
-        impact = html_lib.escape(change.impact or "")
+        desc_html = _format_multiline(change.description)
+        impact_html = _format_multiline(change.impact or "")
         old_c = html_lib.escape(change.old_content or "")
         new_c = html_lib.escape(change.new_content or "")
 
@@ -32,7 +45,7 @@ def render(result: DiffResult) -> str:
         if change.old_content and change.new_content:
             diff_section = f"""
             <details>
-              <summary style="cursor:pointer;color:#555;font-size:0.9em;">▶ View content</summary>
+              <summary style="cursor:pointer;color:#555;font-size:0.9em;">▶ View old/new content</summary>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
                 <div>
                   <div style="font-size:0.8em;font-weight:bold;color:#666;margin-bottom:4px;">OLD</div>
@@ -55,8 +68,8 @@ def render(result: DiffResult) -> str:
             </div>
           </div>
           <div style="padding:12px 16px;font-size:0.9em;">
-            <p style="margin:4px 0;"><strong>Description:</strong> {desc}</p>
-            {f'<p style="margin:4px 0;"><strong>Impact:</strong> {impact}</p>' if impact else ''}
+            <p style="margin:6px 0;"><strong>Description:</strong><br>{desc_html}</p>
+            {f'<p style="margin:6px 0;"><strong>Impact:</strong><br>{impact_html}</p>' if impact_html else ''}
             {diff_section}
           </div>
         </div>"""

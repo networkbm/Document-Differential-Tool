@@ -49,6 +49,14 @@ def _change_label(change_type: str) -> str:
     }.get(change_type, change_type.upper())
 
 
+def _append_block(lines: list[str], label: str, content: str):
+    block_lines = content.splitlines() if content else [""]
+    first = block_lines[0] if block_lines else ""
+    lines.append(f"    {_c(label, DIM)} {first}")
+    for extra in block_lines[1:]:
+        lines.append(f"    {_c('', DIM):<11} {extra}")
+
+
 def render(result: DiffResult, show_diff: bool = False, verbose: bool = False) -> str:
     lines = []
 
@@ -90,9 +98,9 @@ def render(result: DiffResult, show_diff: bool = False, verbose: bool = False) -
 
         lines.append(f"  {_c(change.control_id, BOLD, color)}  {_c(title, BOLD)}")
         lines.append(f"    {_c('Change Type:', DIM)} {_c(label, color)}")
-        lines.append(f"    {_c('Description:', DIM)} {change.description}")
+        _append_block(lines, "Description:", change.description)
         if change.impact:
-            lines.append(f"    {_c('Impact:', DIM)}      {change.impact}")
+            _append_block(lines, "Impact:", change.impact)
 
         if verbose and change.old_content and change.new_content:
             from diff_engine import inline_diff
